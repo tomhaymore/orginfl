@@ -18,18 +18,18 @@ tokenOrgDict = {}
 			    preprocessWriter.writerow([value])"""
 			    
 def preparePreprocessMap():
-    preprocessWriter = csv.writer(open('preprocess_org_dict.csv', 'wb'))
-    preprocessWriter.writerow(["previous", "processed"])
+    
     for i in range(14): #14
         date = 1997 + i
-        csvName = 'FACAMemberList%(date)d' % {'date':date}
-        facaDictReader = csv.DictReader(open(csvName +'.csv', 'rU'))		
-        for eachDictToBeMapped in facaDictReader:
-            for k,v in eachDictToBeMapped.items():
-                oldValue = v
+        baseName = 'FACAMemberList%(date)d' % {'date':date}
+        r = csv.DictReader(open(csvName +'.csv', 'rU'))		
+        w = csv.DictWriter(open(csvName + '_new.csv', 'wb'))
+        
+        for row in r:
+            for k,v in row.items():
                 if k == "OccupationOrAffiliation":
-                    newValue=returnNormalizedString(v) #Regular Expressions
-                    preprocessWriter.writerow([oldValue, newValue])
+                    v = returnNormalizedString(v) #Regular Expressions
+            w.writerow(row)
 
 def createPreprocessMap(): #Dictionary mapping KEY: Unclean org name | Value: Preprocessed org name
     #Execute after Preparing
