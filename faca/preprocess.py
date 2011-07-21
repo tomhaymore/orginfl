@@ -1,5 +1,8 @@
 import csv
 import re
+import database
+
+db = database.Database()
 
 def normalizeOrgs(v):
     """
@@ -128,15 +131,14 @@ def normalizeOrgs(v):
     #Regular Expressions for General Titles.
     return v
 
-def preprocess():
-    
-    for i in range(14): #14
-        date = 1997 + i
+def preprocessFACA():
+	for i in range(14): #14
+		date = 1997 + i
         dir = '/Users/thaymore/Documents/Research/CDRG/Data/FACA/'
         baseName = 'FACAMemberList%(date)d' % {'date':date}
-        r = csv.DictReader(open(dir + baseName +'.csv', 'rU'))		
+        r = csv.DictReader(open(dir + baseName +'.csv', 'rU'))
         w = csv.DictWriter(open(dir + baseName + '_new.csv', 'wb'),fieldnames = r.fieldnames)
-        
+        w.writerow(dict((fn,fn) for fn in r.fieldnames))
         for row in r:
             old = row["OccupationOrAffiliation"]
             for k,v in row.items():
@@ -147,6 +149,22 @@ def preprocess():
             #if old != new:
             #	print old + " | " + new
             w.writerow(row)
-            
+
+def preprocessOrgs():
+	header = {'org_name':'org_name','org_id':'org_id'}
+	# header = ['org_name','org_id']
+	f = open('orgs_list.csv','wb')
+	w = csv.DictWriter(f,fieldnames = header)
+	w.writerow(header)
+	orgs = db.get('orgs')
+	for o in orgs:
+		org = {}
+		org['org_name'] = str(o[1])
+		org['org_id'] = str(o[0])
+		w.writerow(org)
+		
+
+          
 if __name__ == '__main__':
-	preprocess()
+	preprocessFACA()
+	preprocessOrgs()
