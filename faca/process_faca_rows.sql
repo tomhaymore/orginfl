@@ -1,5 +1,24 @@
 -- NB! This script should be executed after loading data from CSV file
 
+-- Match and link individuals
+UPDATE raw_faca JOIN indivs as i
+	ON raw_faca.indiv_id IS NULL AND i.last = raw_faca.lastname AND i.first = raw_faca.firstname AND i.middle = raw_faca.middlename
+SET raw_faca.indiv_id = i.id
+
+-- Insert individuals with no match
+SET @currentTs = CURRENT_TIMESTAMP();
+INSERT IGNORE INTO indivs
+    (`name`, `last`, `first`, middle, `prefix`, suffix, created )
+SELECT 
+    CONCAT(`prefix`," ",lastname,", ",firstname," ",middlename," ",suffix), lastname, firstname, middlename, prefix, suffix, @currentTs
+FROM raw_contracts
+WHERE indiv_id IS NULL;
+
+-- Match and link individuals
+UPDATE raw_faca JOIN indivs as i
+	ON raw_faca.indiv_id IS NULL AND i.last = raw_faca.lastname AND i.first = raw_faca.firstname AND i.middle = raw_faca.middlename
+SET raw_faca.indiv_id = i.id
+
 -- Match and link organizations to the raw_faca_matching table.
 UPDATE raw_faca JOIN raw_faca_match AS rf
     ON raw_faca.org_id IS NULL AND rf.data = raw_faca.occupationoraffiliation

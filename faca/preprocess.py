@@ -141,10 +141,32 @@ def preprocessFACA():
         w.writerow(dict((fn,fn) for fn in r.fieldnames))
         for row in r:
             old = row["OccupationOrAffiliation"]
-            for k,v in row.items():
-                if k == "OccupationOrAffiliation":
-                    v = normalizeOrgs(v) #Regular Expressions
-                    row["OccupationOrAffiliation"] = v
+
+            row["OccupationOrAffiliation"] = normalizeOrgs(row["OccupationOrAffiliation"])
+            # test to see if first and middle name fields are empty
+            if (row["Prefix"] == '' and row["FirstName"] == '' and row["MiddleName"] == ''):
+            	names = row["LastName"].replace(",","")
+            	names = names.split(" ")
+            	# test again to make sure that there is more than one name in LastName field
+            	if len(names) > 1:
+            		count = 0
+            		for name in names:
+            			if count == 0:
+            				row["LastName"] = name
+            				count += 1
+            			elif count == 1:
+            				row["FirstName"] = name
+            				count += 1
+            			elif count == 2:
+            				row["MiddleName"] = name
+            				count += 1
+            			else:
+            				# what do we do here?
+            				pass
+            # for k,v in row.items():
+            #    if k == "OccupationOrAffiliation":
+            #        v = normalizeOrgs(v) #Regular Expressions
+            #        row["OccupationOrAffiliation"] = v
             new = row["OccupationOrAffiliation"]
             #if old != new:
             #	print old + " | " + new
