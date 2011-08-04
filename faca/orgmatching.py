@@ -111,10 +111,7 @@ if __name__ == "__main__":
     rawSet = set([])
     preprocessSet = set([])
     rawDict = createOrgMap() # Keys are all Upper-Case
-    print rawDict
-    # write to file?
-    # f = open('master_map.csv','wb')
-    # f.write(rawDict)
-    # w = csv.writer(f)
-    # w.writerow(rawDict)
-
+    # print rawDict
+    # probably should run usa spending first; get the list of organizations
+    # at this point, should probably use master map and write another version of the FACA files
+    # then put them into the database and start folding over

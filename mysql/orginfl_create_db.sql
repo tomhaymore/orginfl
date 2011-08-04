@@ -1,3 +1,5 @@
+/* need to add more tables here */
+
 CREATE DATABASE 'orginfl';
 
 CREATE TABLE 'orgs' (

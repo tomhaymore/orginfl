@@ -1,0 +1,27 @@
+Basic overview: I have a PHP script that I need to convert to a Python script that will process large csv files and insert them into a MySQL database. Most of the fields can be ignored, but the files are quite large (~2GB+) and contain 500,000+ lines (so each line is also pretty large). Speed of processing is incredibly important and a bonus will be paid for any script that improves over current speeds (~12,000 lines / hour).
+
+Detail:
+The text files that I'm trying to process contain records of U.S. Government spending. For each record, I first need to check to see if the particular recipient of this contract is already in my database; if not, I need to insert that recipient into the database as well as the contract details. Currently, I have a PHP script that can process about 12,000 lines an hour (running on my Mac 10.6). I would like to convert this to a Python script (and hopefully speed it up).
+
+The php script is attached, and is not long -- you can probably get all the information you need from it. 'usaspending_auto.php' is the main script, and it uses the classes in 'usaspending.php' and 'database.php'. (The database file is a very simple class wrapper for PHP db functions.) However, further detail is included below.
+
+The script first pulls the government agency the contract belongs to, and checks to see if this agency is in the 'orgs' table (it does this by checking the code for the agency against a table of codes and org ids). If it's not already in the db, it adds the agency as an 'org' before pulling the recipient of contract (usually an organization like Ford Motor Company) and checking if there is already such an organization in my database. If so, the contract information is then added referencing the recipient organization. If not, the information for that organization is added and then contract information is inserted into the db.
+
+Fields Required
+A complete list of fields is in the attachment 'usaspending_fields.csv'. The highlighted fields are the required ones.
+
+DB Tables
+There are several DB tables that need to be updated with each line.
+-- 'affs' : this is the main table for basic contract information
+-- 'affs_meta' : this is the main table for detailed contract information
+-- 'files_processed' : this keeps track of which file is being processed, which line the pointer is on, etc.
+(some of the following "orgs" tables are only updated if a new recipient is added)
+-- 'orgs' : this is the main table for basic recipient information
+-- 'orgs_meta' : this is the main table for detailed recipient information
+-- 'orgs_contact' : contains contact information for recipients
+-- 'orgs_ref' : contains some reference information for each recipient
+
+The schemas for these tables are included as attachments. Details for which fields go to which are probably most easily found in the PHP script itself.
+------------------------------------------
+Added 10 MAY 2011, 12:05 PM EDT
+** The data files can be obtained here: http://usaspending.gov/customcode/data_archives_iframe.php?&&formFields=&&tab=Archives&fiscal_year=2011&carryfilters=off. The year does not matter -- but spending type should say "Contracts" and then there are a few different formats to choose from. These files are too big to upload to elance directly. 
