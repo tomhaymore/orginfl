@@ -1,22 +1,18 @@
-#-------------------------------------------------------------------------------
-# Name:        faca
-# Purpose:     FACA Data load and processing
-#
-# Author:      Radomirs Cirskis, modified by Thomas Haymore
-#
-# Created:     15/05/2011
-#-------------------------------------------------------------------------------
-#!/usr/bin/env python
-
+from decimal import *
+import csv
+import database
+import re
 import sys
 import os
 import os.path
 import argparse
 import datetime
-##import pymysql
 import glob
 import time
 import tempfile
+
+orgsToNormDict = {}
+tokenOrgDict = {}
 
 def getArgs():
     """
@@ -82,145 +78,86 @@ def loadRawData( fileName):
     f = open( tempScript, 'w' )
     f.write(
     """
-    TRUNCATE TABLE raw_contracts;
-    ALTER TABLE raw_contracts DROP INDEX raw_contracts_org_id_idx;
-    ALTER TABLE raw_contracts DROP INDEX raw_contracts_maj_agency_cat_idx;
-    ALTER TABLE raw_contracts DROP INDEX raw_contracts_agency_org_id_idx;
-    ALTER TABLE raw_contracts DISABLE KEYS;
+    TRUNCATE TABLE raw_faca;
+    ALTER TABLE raw_faca DROP INDEX raw_faca_org_id_idx;
+    ALTER TABLE raw_faca DROP INDEX raw_faca_maj_agency_cat_idx;
+    ALTER TABLE raw_faca DROP INDEX raw_faca_agency_org_id_idx;
+    ALTER TABLE raw_faca DISABLE KEYS;
 
     LOAD DATA CONCURRENT
     INFILE '%s'
     IGNORE
-    INTO TABLE raw_contracts
+    INTO TABLE raw_faca
     FIELDS TERMINATED BY ','
     OPTIONALLY ENCLOSED BY '\\"'
     LINES TERMINATED BY '\\n'
      
     (
-            @unique_transaction_id,
-            @dummy, -- transaction_status,
-            obligatedamount,
-            @dummy, -- baseandexercisedoptionsvalue,
-            @dummy, -- baseandalloptionsvalue,
-            maj_agency_cat,
-            @dummy, -- mod_agency,
-            @dummy, -- maj_fund_agency_cat,
-            @dummy, -- contractingofficeagencyid,
-            @dummy, -- contractingofficeid,
-            @dummy, -- fundingrequestingagencyid,
-            @dummy, -- fundingrequestingofficeid,
-            @dummy, -- fundedbyforeignentity,
-            @dummy, -- signeddate,
-            effectivedate,
-            @dummy, -- currentcompletiondate,
-            ultimatecompletiondate,
-            @dummy, -- lastdatetoorder,
-            @dummy, -- contractactiontype,
-            @dummy, -- reasonformodification,
-            @dummy, -- typeofcontractpricing,
-            @dummy, -- priceevaluationpercentdifference,
-            @dummy, -- subcontractplan,
-            @dummy, -- type_of_contract,
-            @dummy, -- lettercontract,
-            @dummy, -- multiyearcontract,
-            @dummy, -- performancebasedservicecontract,
-            @dummy, -- majorprogramcode,
-            @dummy, -- contingencyhumanitarianpeacekeepingoperation,
-            @dummy, -- contractfinancing,
-            @dummy, -- costorpricingdata,
-            @dummy, -- costaccountingstandardsclause,
-            descriptionofcontractrequirement,
-            @dummy, -- purchasecardaspaymentmethod,
-            @dummy, -- numberofactions,
-            @dummy, -- nationalinterestactioncode,
-            @dummy, -- progsourceagency,
-            @dummy, -- progsourceaccount,
-            @dummy, -- progsourcesubacct,
-            account_title,
-            @dummy, -- rec_flag,
-            @dummy, -- typeofidc,
-            @dummy, -- multipleorsingleawardidc,
-            @dummy, -- programacronym,
-            vendorname,
-            vendoralternatename,
-            vendorlegalorganizationname,
-            vendordoingasbusinessname,
-            @dummy, -- divisionname,
-            @dummy, -- divisionnumberorofficecode,
-            @dummy, -- vendorenabled,
-            @dummy, -- vendorlocationdisableflag,
-            @dummy, -- ccrexception,
-            streetaddress,
-            streetaddress2,
-            streetaddress3,
-            city,
-            state,
-            zipcode,
-            vendorcountrycode,
-            vendor_state_code,
-            vendor_cd,
-            @dummy, -- congressionaldistrict,
-            @dummy, -- vendorsitecode,
-            @dummy, -- vendoralternatesitecode,
-            dunsnumber,
-            parentdunsnumber,
-            phoneno,
-            faxno,
-            @dummy, -- registrationdate,
-            @dummy, -- renewaldate,
-            @dummy, -- mod_parent,
-            @dummy, -- locationcode,
-            @dummy, -- statecode,
-            @dummy, -- pop_state_code,
-            @dummy, -- placeofperformancecountrycode,
-            @dummy, -- placeofperformancezipcode,
-            @dummy, -- pop_cd,
-            @dummy, -- placeofperformancecongressionaldistrict,
-            psc_cat,
-            productorservicecode,
-            @dummy, -- systemequipmentcode,
-            @dummy, -- claimantprogramcode,
-            @dummy, -- principalnaicscode,
-            @dummy, -- informationtechnologycommercialitemcategory,
-            @dummy, -- gfe_gfp,
-            @dummy, -- useofepadesignatedproducts,
-            @dummy, -- recoveredmaterialclauses,
-            @dummy, -- seatransportation,
-            @dummy, -- contractbundling,
-            @dummy, -- consolidatedcontract,
-            @dummy, -- countryoforigin,
-            @dummy, -- placeofmanufacture,
-            @dummy, -- manufacturingorganizationtype,
-            @dummy, -- agencyid,
-            @dummy, -- piid,
-            @dummy, -- modnumber,
-            @dummy, -- transactionnumber,
-            fiscal_year,
-            @dummy, -- idvagencyid,
-            @dummy, -- idvpiid,
-            @dummy, -- idvmodificationnumber,
-            @dummy, -- solicitationid,
-            @dummy, -- extentcompeted,
-            @dummy, -- reasonnotcompeted,
-            @dummy, -- numberofoffersreceived,
-            @dummy, -- commercialitemacquisitionprocedures,
-            @dummy, -- commercialitemtestprogram,
-            @dummy, -- smallbusinesscompetitivenessdemonstrationprogram,
-            @dummy, -- a76action,
-            @dummy, -- competitiveprocedures,
-            @dummy, -- solicitationprocedures,
-            @dummy, -- typeofsetaside,
-            @dummy, -- localareasetaside,
-            @dummy, -- evaluatedpreference,
-            @dummy, -- fedbizopps,
-            @dummy, -- research,
-            @dummy, -- statutoryexceptiontofairopportunity,
-            @dummy, -- organizationaltype,
-            numberofemployees,
-            annualrevenue )
-        SET unique_transaction_id = UNHEX(@unique_transaction_id);
+        AgencyAbbr,
+        CommitteeName,
+        CNo,
+        FY,
+        Prefix,
+        FirstName,
+        MiddleName,
+        LastName,
+        Suffix,
+        MemberDesignation,
+        RepresentedGroup,
+        Chairperson,
+        OccupationOrAffiliation,
+        @StartDate,
+        @EndDate,
+        @dummy, -- CreatedAt,
+        @dummy, -- CreatedBy,
+        @dummy, -- ChangedAt,
+        @dummy, -- ChangedBy,
+        @dummy, -- IncludeinAnnualReport,
+        AppointmentType,
+        AppointmentTerm,
+        PayPlan,
+        PaySource,
+        @dummy -- LastLogonDate
+        );
 
-        ALTER TABLE raw_contracts ENABLE KEYS;
+    ALTER TABLE raw_faca ENABLE KEYS;
+    """ % fileName.replace('\\','\\\\') )
+    f.close()
+    cmd = getMySqlCommand()+"<\""+tempScript+"\""
+    os.system( cmd  )
+
+def loadRawMatching():
+    """
+    Loads matching map
+    """
+	filename = 'org_matching_master.csv'
+    tempScript = tempfile.mktemp('.sql')
+    f = open( tempScript, 'w' )
+    f.write(
+    """
+    TRUNCATE TABLE raw_faca_match;
+    ALTER TABLE raw_faca_match DROP INDEX raw_faca_id_idx;
+    ALTER TABLE raw_faca_match DROP INDEX raw_faca_data_idx;
+    ALTER TABLE raw_faca_match DISABLE KEYS;
+
+    LOAD DATA CONCURRENT
+    INFILE '%s'
+    IGNORE
+    INTO TABLE raw_faca_match
+    FIELDS TERMINATED BY ','
+    OPTIONALLY ENCLOSED BY '\\"'
+    LINES TERMINATED BY '\\n'
+     
+    (
+        data,
+        id,
+        match
+        );
+
+    ALTER TABLE raw_faca_match ENABLE KEYS;
+    ALTER TABLE raw_faca_match ADD FULLTEXT INDEX 'raw_faca_data_idx' ('data');
+    ALTER TABLE raw_faca_match ADD INDEX 'raw_faca_id_idx' ('id');
+    
     """ % fileName.replace('\\','\\\\') )
     f.close()
     cmd = getMySqlCommand()+"<\""+tempScript+"\""
@@ -228,35 +165,121 @@ def loadRawData( fileName):
 
 def processRows():
     """
-    Invokes process_contrcts_rows.sql to process loaded rows from the CSV file
+    Invokes process_faca_rows.sql to process loaded rows from the CSV file
     """
-    cmd = getMySqlCommand()+"<\""+ getScriptAbsPath('process_contracts_rows.sql') +"\""
+    cmd = getMySqlCommand()+"<\""+ getScriptAbsPath('process_faca_rows.sql') +"\""
     os.system( cmd  )
 
-def main():
+def createOrgMap(): 
+    
+    """ 
+    creates master map of data to actual organizations
     """
-    1. parse parameters;
-    2. loops through the file list (one file or all in the directory);
-    3. loads file and prcesses it;
+    
+    global orgsToNormDict
+    global tokenOrgDict
+    global orgId
+    global header
+    
+    orgsToNormDict = {}
+    tokenOrgDict = createTokenMap()
+    r = csv.DictReader(open('orgs_list.csv', 'rU')) #preprocess_org_list.csv
+    for row in r:
+        orgId = row["org_id"]
+        v = row["org_name"]
+        v = v.upper()
+        intersectAndMatch(v)
+    # print "Number of Organizations that are Normalizable: %(size)d" % {"size":len(orgsToNormDict)}
+    return orgsToNormDict
+    
+
+def createTokenMap(): 
+    
+    """ returns dictionary - set map of actual data
+    key: tokenized words
+    value: normalized data
     """
-    time_start = time.time()
-    args = getArgs()
-    setMySqlCommand( args)
-    if not os.path.exists( args.input ):
-        raise Exception("File or directory %s doesn't exist!" % args.input)
+    
+    tokenToStringDict = {}
+    # don't need preprocess anymore because the file is preprocessed
+    # preprocessDict = createPreprocessMap()
+    count = 0
+    for i in range(14): #14
+        date = 1997 + i
+        fileName = '/Users/thaymore/Documents/Research/CDRG/Data/FACA/FACAMemberList%(date)d' % {'date':date}
+        # r = csv.DictReader(open(fileName +'_new.csv', 'rU'))		
+        r = csv.reader(open(fileName +'_new.csv', 'rU'))		
+        for row in r:
+            v = row[12] # row["OccupationOrAffiliation"]
+            # value = preprocessDict[v] # Get Preprocessed Value
+            v = v.upper()
+            tokenSet = set(v.split(" ")) # Tokenize
+            for token in tokenSet:
+                if token not in tokenToStringDict:
+                    newSet = set([])
+                    tokenToStringDict[token] = newSet
+                tokenToStringDict[token].add(v) #Add the normalized organized name
+            count += 1
+    print "Size of Token to Org Dict: %(size)d" % {"size":len(tokenToStringDict)}
+    print "Num of Total Orgs: %d" % count
+    return tokenToStringDict
 
-    # data source:
-    source = os.path.abspath( args.input)
-    # List of CSV files:
-    source = [source] if os.path.isfile( source) else glob.glob( os.path.join( source, '*.csv') )
+def intersectAndMatch(value):
+    
+    """ matches maps together
+    """
+    
+    global orgsToNormDict
+    global orgId
+    global header
+    
+    tokenSet = set(value.split(" "))
+    finalSet = set([])	
+    iterationCount = 0
+    for token in tokenSet:        
+        if token in tokenOrgDict:
+            if len(finalSet) == 0 and iterationCount > 0:
+                break
+            if iterationCount == 0: #First Match
+                finalSet = tokenOrgDict[token]            
+                iterationCount+=1
+            else: #Find Intersection of all Matches
+                finalSet = tokenOrgDict[token].intersection(finalSet) #Copy or actual, looks like actual...?
+        else: #Not 100% Match, Empty the Set
+            finalSet = set([])
+            break
+    # need to check here for empty finalSet and skip next if so; else starts packing into final set
+    
+    f = open('org_matching_master.csv','a')
+    w = csv.DictWriter(f,fieldnames = header)
+    
+    for org in finalSet:
+        # write in matches: org, match, id
+        data = {'data':org,'match':value,'id':orgId}
+        w.writerow(data)
+        if org in orgsToNormDict:
+            if len(value) > len(orgsToNormDict[org]): #Always take the longer string
+                orgsToNormDict[org] = value
+                # write to file -- or later
+        else:
+            orgsToNormDict[org] = value
+            # write to file
+    f.close()
 
-    totalRowCount = 0
-    for f in source:
-        loadRawData(f)
+if __name__ == "__main__":
+    global header
+    f = open('org_matching_master.csv','wb')
+    header = {'data':'data','match':'match','id':'id'}
+    w = csv.DictWriter(f,fieldnames = header)
+    w.writerow(header)
+    rawSet = set([])
+    preprocessSet = set([])
+    createOrgMap() # Keys are all Upper-Case
+    loadRawMatching()
+    for i in range(14):
+    	date = 1997 + i
+        fileName = '/Users/thaymore/Documents/Research/CDRG/Data/FACA/FACAMemberList%(date)d' % {'date':date}
+        loadRawData(filename)
         processRows()
-
-    showMsg( "Data processing completed in %.5f sec."
-        % (time.time()-time_start))
-
-if __name__ == '__main__':
-    main()
+    # print rawDict
+    # need to load org_matching_master.csv into database, then use it as part of process_faca to fold over into db
