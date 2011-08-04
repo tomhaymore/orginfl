@@ -2,5 +2,5 @@ To do:
 
 -- creating db script
 -- individual for faca
--- start and end datas for indivs and employers on faca
+-- start and end dates for indivs and employers on faca
 -- matching agencies for grants processing script
