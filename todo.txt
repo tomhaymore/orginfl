@@ -1,6 +1,6 @@
 To do:
 
 -- creating db script
--- individual for faca
+-- does the individual matching work?
 -- start and end dates for indivs and employers on faca
 -- matching agencies for grants processing script
