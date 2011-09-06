@@ -14,8 +14,7 @@ RETURNS TEXT
     CONTAINS SQL
 BEGIN
 SET v = TRIM(
-REPLACE(REPLACE(REPLACE(REPLACE( REPLACE(v,'\t',' '), '  ', ' '), '  ', ' '), '  ', ' '), '  ', ' ')
-);
+REPLACE( REPLACE(v,'\t',' '), '  ', ' '));
 IF v='' THEN SET v=NULL; END IF;
 RETURN v;
 END$$

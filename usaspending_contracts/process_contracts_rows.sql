@@ -16,6 +16,7 @@ SET vendorname=normal_name(vendorname),
 UPDATE raw_contracts JOIN orgs AS o
     ON raw_contracts.org_id IS NULL AND o.name = raw_contracts.vendorname
 SET raw_contracts.org_id = o.id;
+
 UPDATE raw_contracts JOIN orgs_aliases AS a
     ON raw_contracts.org_id IS NULL AND a.`name` = raw_contracts.vendorname
 SET raw_contracts.org_id = a.org_id;
